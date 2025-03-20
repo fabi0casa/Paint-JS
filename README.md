@@ -25,7 +25,7 @@ Além disso, o design e a funcionalidade foram inspirados no MS Paint clássico.
 - **p5.js**: Biblioteca JavaScript para desenho e animação
 
 
-### Clique [aqui](https://fabin0casa.github.io/Paint-JS/) para acessar o site com o GitHub Pages.
+### Clique [aqui](https://fabi0casa.github.io/Paint-JS/) para acessar o site com o GitHub Pages.
 	
 
 
