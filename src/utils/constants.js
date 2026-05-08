@@ -50,7 +50,7 @@ export const CANVAS_GAP = 28;
 export const TOOLBAR_BUTTON_SIZE = 32;
 export const PALETTE_BUTTON_SIZE = 24;
 export const RESIZE_HANDLE_SIZE = 8;
-export const PIXEL_SCALE = 4; // Cada pixel do usuário terá 4x4 pixels na tela
+export const PIXEL_SCALE = 2; // Cada pixel do usuário terá 2x2 pixels na tela
 
 export const COLORS = {
   MEDIUM_BLUISH_GREY: [127, 153, 178],

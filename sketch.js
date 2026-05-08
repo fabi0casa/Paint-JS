@@ -16,6 +16,7 @@ function preload() {
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
+  noSmooth(); // Desativa o anti-aliasing globalmente
   pixelDensity(1);
   paintWindow = new PaintWindow(
     0,
