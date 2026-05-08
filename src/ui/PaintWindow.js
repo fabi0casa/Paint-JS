@@ -31,6 +31,17 @@ export class PaintWindow {
       }
     );
 
+    this.downloadButton = new Button(
+      this.x + this.w - (ICON_SIZE * 2) - MARGIN * 4,
+      this.y + MARGIN * 2,
+      ICON_SIZE,
+      ICON_SIZE,
+      "💾",
+      () => {
+        this.canvas.downloadImage();
+      }
+    );
+
     this.toolbar = new Toolbar(
       this.x + MARGIN,
       this.y + TITLEBAR_H + MARGIN * 2,
@@ -77,6 +88,7 @@ export class PaintWindow {
 
     this.drawTitleBar();
     this.closeButton.draw();
+    this.downloadButton.draw();
     this.toolbar.draw();
 
     // Canvas container background
@@ -135,6 +147,7 @@ export class PaintWindow {
 
   mousePressed(mx, my) {
     this.closeButton.mousePressed(mx, my);
+    this.downloadButton.mousePressed(mx, my);
     this.palette.mousePressed(mx, my);
     this.toolbar.mousePressed(mx, my);
     this.canvas.mousePressed(mx, my);

@@ -20,6 +20,10 @@ export class Canvas {
     this.resizeMode = null;
   }
 
+  downloadImage() {
+    save(this.buffer, "meu-desenho.png");
+  }
+
   initBuffer(visualW, visualH) {
     const bw = Math.max(1, Math.floor(visualW / PIXEL_SCALE));
     const bh = Math.max(1, Math.floor(visualH / PIXEL_SCALE));
