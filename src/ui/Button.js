@@ -21,16 +21,39 @@ export class Button {
       const imgY = this.y + this.h / 2 - imgHeight / 2;
       image(this.img, imgX, imgY, imgWidth, imgHeight);
     } else {
-      const c = this.fillColor ? color(this.fillColor) : color(...COLORS.MEDIUM_BLUISH_GREY);
-      fill(c);
-      stroke(0);
-      rect(this.x, this.y, this.w, this.h);
-      if (!this.fillColor) {
-        fill(0);
+      if (this.label === "+") {
+        // Desenho especial do botão arco-íris
+        for (let i = 0; i < this.w; i++) {
+          let hue = map(i, 0, this.w, 0, 255);
+          colorMode(HSB);
+          stroke(hue, 200, 255);
+          line(this.x + i, this.y, this.x + i, this.y + this.h);
+        }
+        colorMode(RGB);
+        stroke(0);
+        noFill();
+        rect(this.x, this.y, this.w, this.h);
+        
+        // Texto "+" por cima
+        fill(255);
         noStroke();
-        textSize(10);
+        textSize(16);
         textAlign(CENTER, CENTER);
+        textStyle(BOLD);
         text(this.label, this.x + this.w / 2, this.y + this.h / 2);
+        textStyle(NORMAL);
+      } else {
+        const c = this.fillColor ? color(this.fillColor) : color(...COLORS.MEDIUM_BLUISH_GREY);
+        fill(c);
+        stroke(0);
+        rect(this.x, this.y, this.w, this.h);
+        if (!this.fillColor) {
+          fill(0);
+          noStroke();
+          textSize(10);
+          textAlign(CENTER, CENTER);
+          text(this.label, this.x + this.w / 2, this.y + this.h / 2);
+        }
       }
     }
   }

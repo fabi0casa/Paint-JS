@@ -10,34 +10,20 @@ export const AVAILABLE_TOOLS = [
 ];
 
 export const WEB_COLORS = [
-  "black",
-  "gray",
-  "maroon",
-  "olive",
-  "green",
-  "teal",
-  "navy",
-  "purple",
-  "darkkhaki",
-  "darkgreen",
-  "dodgerblue",
-  "royalblue",
-  "blueviolet",
-  "brown",
-  "white",
-  "silver",
-  "red",
-  "yellow",
-  "lime",
-  "aqua",
-  "blue",
-  "fuchsia",
-  "moccasin",
-  "springgreen",
-  "aqua",
-  "lightsteelblue",
-  "deeppink",
-  "orange",
+  "red", "maroon",             // Coluna 1: Vermelhos
+  "orange", "brown",           // Coluna 2: Laranjas / Marrons
+  "yellow", "darkkhaki",       // Coluna 3: Amarelos
+  "moccasin", "olive",         // Coluna 4: Tons de Creme / Oliva
+  "lime", "green",             // Coluna 5: Verdes Limão
+  "springgreen", "darkgreen",  // Coluna 6: Verdes Escuros
+  "aqua", "teal",              // Coluna 7: Cianos / Água
+  "aqua", "dodgerblue",        // Coluna 8: Azuis Claros
+  "lightsteelblue", "blue",    // Coluna 9: Azuis Médios
+  "royalblue", "navy",         // Coluna 10: Azuis Escuros
+  "fuchsia", "blueviolet",     // Coluna 11: Magentas / Violetas
+  "deeppink", "purple",        // Coluna 12: Rosas / Roxos
+  "white", "silver",           // Coluna 13: Branco / Prata
+  "gray", "black",             // Coluna 14: Cinza / Preto
 ];
 
 export const MARGIN = 2;
