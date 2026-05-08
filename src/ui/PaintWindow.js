@@ -65,10 +65,6 @@ export class PaintWindow {
     
     this.palette.y = this.y + this.h - PALETTE_H - MARGIN;
     this.palette.w = this.w - MARGIN * 2;
-
-    const canvasW = this.w - TOOLBAR_W - CANVAS_GAP;
-    const canvasH = this.h - PALETTE_H - TITLEBAR_H - CANVAS_GAP;
-    this.canvas.resizeBuffer(canvasW, canvasH);
   }
 
   draw() {
@@ -84,16 +80,25 @@ export class PaintWindow {
     this.toolbar.draw();
 
     // Canvas container background
+    const containerX = this.x + TOOLBAR_W + PADDING / 2;
+    const containerY = this.y + TITLEBAR_H + MARGIN + PADDING / 2;
+    const containerW = this.w - TOOLBAR_W - PADDING;
+    const containerH = this.h - PALETTE_H - TITLEBAR_H - PADDING - MARGIN;
+
     fill(...COLORS.DARK_BLUISH_GREY);
     noStroke();
-    rect(
-      this.x + TOOLBAR_W + PADDING / 2,
-      this.y + TITLEBAR_H + MARGIN + PADDING / 2,
-      this.w - TOOLBAR_W - PADDING,
-      this.h - PALETTE_H - TITLEBAR_H - PADDING - MARGIN
-    );
+    rect(containerX, containerY, containerW, containerH);
     
+    // Scissor para clipar o desenho do canvas dentro do container azul
+    drawingContext.save();
+    drawingContext.beginPath();
+    drawingContext.rect(containerX, containerY, containerW, containerH);
+    drawingContext.clip();
+
     this.canvas.display();
+
+    drawingContext.restore();
+
     this.palette.draw();
   }
 

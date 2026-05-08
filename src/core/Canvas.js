@@ -1,14 +1,15 @@
 import { state } from "../utils/state.js";
+import { RESIZE_HANDLE_SIZE, PIXEL_SCALE } from "../utils/constants.js";
 
 export class Canvas {
   constructor(x, y, w, h) {
     this.x = x;
     this.y = y;
-    this.w = w;
-    this.h = h;
+    this.w = w; // Largura visual (pixels na tela)
+    this.h = h; // Altura visual
 
-    this.buffer = createGraphics(w, h);
-    this.buffer.background(255);
+    // O buffer real terá menos pixels (proporcional ao PIXEL_SCALE)
+    this.initBuffer(w, h);
 
     this.previewX = null;
     this.previewY = null;
@@ -16,22 +17,60 @@ export class Canvas {
     this.drawingY = null;
     this.lastX = null;
     this.lastY = null;
+
+    this.resizeMode = null; // 'w', 'h', 'nw' (diagonal)
   }
 
-  resizeBuffer(newWidth, newHeight) {
+  initBuffer(visualW, visualH) {
+    const bw = Math.max(1, Math.floor(visualW / PIXEL_SCALE));
+    const bh = Math.max(1, Math.floor(visualH / PIXEL_SCALE));
+    this.buffer = createGraphics(bw, bh);
+    this.buffer.noSmooth();
+    this.buffer.background(255);
+  }
+
+  resizeBuffer(visualW, visualH) {
+    // Garante tamanho mínimo visual
+    visualW = Math.max(PIXEL_SCALE * 2, visualW);
+    visualH = Math.max(PIXEL_SCALE * 2, visualH);
+
+    const bw = Math.max(1, Math.floor(visualW / PIXEL_SCALE));
+    const bh = Math.max(1, Math.floor(visualH / PIXEL_SCALE));
+    
+    if (bw === this.buffer.width && bh === this.buffer.height) {
+        this.w = visualW;
+        this.h = visualH;
+        return;
+    }
+
     const oldBuffer = this.buffer;
-    this.w = newWidth;
-    this.h = newHeight;
-    this.buffer = createGraphics(newWidth, newHeight);
+    this.w = visualW;
+    this.h = visualH;
+    
+    this.buffer = createGraphics(bw, bh);
+    this.buffer.noSmooth();
     this.buffer.background(255);
     this.buffer.image(oldBuffer, 0, 0);
   }
 
   display() {
-    fill(255);
+    // Sombra
+    fill(100);
     noStroke();
+    rect(this.x + 2, this.y + 2, this.w, this.h);
+
+    // Papel (fundo branco esticado)
+    fill(255);
+    stroke(0);
+    strokeWeight(1);
     rect(this.x, this.y, this.w, this.h);
-    image(this.buffer, this.x, this.y);
+    
+    // Desenha o buffer esticado para dar o efeito de pixel art
+    noSmooth();
+    image(this.buffer, this.x, this.y, this.w, this.h);
+
+    this.drawResizeHandles();
+    this.updateCursor();
 
     if (this.isDrawingGeometry() && this.previewX !== null && this.previewY !== null) {
       this.drawShape(
@@ -45,6 +84,56 @@ export class Canvas {
     }
   }
 
+  drawResizeHandles() {
+    fill(255);
+    stroke(0);
+    strokeWeight(1);
+    const s = RESIZE_HANDLE_SIZE;
+    
+    // Direita (Horizontal)
+    rect(this.x + this.w, this.y + this.h / 2 - s / 2, s, s);
+    // Baixo (Vertical)
+    rect(this.x + this.w / 2 - s / 2, this.y + this.h, s, s);
+    // Canto (Diagonal)
+    rect(this.x + this.w, this.y + this.h, s, s);
+  }
+
+  updateCursor() {
+    const mx = mouseX;
+    const my = mouseY;
+    const s = RESIZE_HANDLE_SIZE;
+
+    // Se já estiver redimensionando, mantém o cursor de redimensionamento
+    if (this.resizeMode) {
+      if (this.resizeMode === 'nw') cursor('nwse-resize');
+      else if (this.resizeMode === 'w') cursor('ew-resize');
+      else if (this.resizeMode === 'h') cursor('ns-resize');
+      return;
+    }
+
+    // Detecção das alças para mudar o cursor (usando margem de erro pequena para facilitar)
+    const overRight = mx >= this.x + this.w && mx <= this.x + this.w + s &&
+                      my >= this.y + this.h / 2 - s / 2 && my <= this.y + this.h / 2 + s / 2;
+    
+    const overBottom = mx >= this.x + this.w / 2 - s / 2 && mx <= this.x + this.w / 2 + s / 2 &&
+                       my >= this.y + this.h && my <= this.y + this.h + s;
+    
+    const overCorner = mx >= this.x + this.w && mx <= this.x + this.w + s &&
+                       my >= this.y + this.h && my <= this.y + this.h + s;
+
+    if (overCorner) {
+      cursor('nwse-resize');
+    } else if (overRight) {
+      cursor('ew-resize');
+    } else if (overBottom) {
+      cursor('ns-resize');
+    } else if (this.mouseInsideCanvas(mx, my)) {
+      cursor(CROSS); // Cursor de precisão dentro do canvas
+    } else {
+      cursor(ARROW);
+    }
+  }
+
   mouseInsideCanvas(mx, my) {
     return mx >= this.x && mx <= this.x + this.w && my >= this.y && my <= this.y + this.h;
   }
@@ -54,53 +143,70 @@ export class Canvas {
   }
 
   getStrokeWeight() {
-    return state.currentTool === "brush" ? 5 : 1;
+    return state.currentTool === "brush" ? 2 : 1;
   }
 
-  beginGeometry(x, y) {
-    this.drawingX = x;
-    this.drawingY = y;
-    this.previewX = null;
-    this.previewY = null;
-  }
-
-  endGeometry(x, y) {
-    if (this.isDrawingGeometry()) {
-      this.drawShape(state.currentTool, this.drawingX, this.drawingY, x, y);
-    }
-    this.drawingX = null;
-    this.drawingY = null;
-    this.previewX = null;
-    this.previewY = null;
+  toBufferCoord(v, offset) {
+    return Math.floor((v - offset) / PIXEL_SCALE);
   }
 
   drawShape(shape, x1, y1, x2, y2, persist = true) {
     const target = persist ? this.buffer : window;
+    
+    let bx1 = x1, by1 = y1, bx2 = x2, by2 = y2;
+    if (persist) {
+      bx1 = this.toBufferCoord(x1, 0);
+      by1 = this.toBufferCoord(y1, 0);
+      bx2 = this.toBufferCoord(x2, 0);
+      by2 = this.toBufferCoord(y2, 0);
+    }
+
     target.stroke(state.currentColor);
     target.strokeWeight(this.getStrokeWeight());
 
     switch (shape) {
       case "line":
-        target.line(x1, y1, x2, y2);
+        target.line(bx1, by1, bx2, by2);
         break;
       case "rect":
         target.noFill();
-        target.rect(x1, y1, x2 - x1, y2 - y1);
+        target.rect(bx1, by1, bx2 - bx1, by2 - by1);
         break;
       case "circle":
         target.noFill();
-        const rx = (x2 - x1) / 2;
-        const ry = (y2 - y1) / 2;
-        target.ellipse(x1 + rx, y1 + ry, Math.abs(rx * 2), Math.abs(ry * 2));
+        const rx = (bx2 - bx1) / 2;
+        const ry = (by2 - by1) / 2;
+        target.ellipse(bx1 + rx, by1 + ry, Math.abs(rx * 2), Math.abs(ry * 2));
         break;
     }
   }
 
   mousePressed(mx, my) {
+    const s = RESIZE_HANDLE_SIZE;
+
+    // Detectar qual alça foi clicada (prioridade para o canto)
+    if (mx >= this.x + this.w && mx <= this.x + this.w + s &&
+        my >= this.y + this.h && my <= this.y + this.h + s) {
+      this.resizeMode = 'nw';
+      return;
+    } 
+    
+    if (mx >= this.x + this.w && mx <= this.x + this.w + s &&
+        my >= this.y + this.h / 2 - s / 2 && my <= this.y + this.h / 2 + s / 2) {
+      this.resizeMode = 'w';
+      return;
+    } 
+    
+    if (mx >= this.x + this.w / 2 - s / 2 && mx <= this.x + this.w / 2 + s / 2 &&
+        my >= this.y + this.h && my <= this.y + this.h + s) {
+      this.resizeMode = 'h';
+      return;
+    }
+
     if (!this.mouseInsideCanvas(mx, my)) return;
 
-    const ax = mx - this.x;
-    const ay = my - this.y;
+    const ax = this.toBufferCoord(mx, this.x);
+    const ay = this.toBufferCoord(my, this.y);
     this.lastX = ax;
     this.lastY = ay;
 
@@ -117,7 +223,7 @@ export class Canvas {
       case "line":
       case "rect":
       case "circle":
-        this.beginGeometry(ax, ay);
+        this.beginGeometry(mx - this.x, my - this.y);
         break;
       case "spray":
         this.sprayPaint(ax, ay);
@@ -126,23 +232,32 @@ export class Canvas {
   }
 
   mouseDragged(mx, my) {
-    const ax = mx - this.x;
-    const ay = my - this.y;
-
-    if (!this.mouseInsideCanvas(mx, my)) {
-      if (!this.isDrawingGeometry()) {
-        this.lastX = null;
-        this.lastY = null;
-      }
+    if (this.resizeMode) {
+      let newW = this.w;
+      let newH = this.h;
+      if (this.resizeMode === 'w' || this.resizeMode === 'nw') newW = mx - this.x;
+      if (this.resizeMode === 'h' || this.resizeMode === 'nw') newH = my - this.y;
+      this.resizeBuffer(newW, newH);
       return;
     }
+
+    if (!this.mouseInsideCanvas(mx, my)) {
+      this.lastX = null;
+      this.lastY = null;
+      return;
+    }
+
+    const ax = this.toBufferCoord(mx, this.x);
+    const ay = this.toBufferCoord(my, this.y);
 
     switch (state.currentTool) {
       case "spray":
         this.sprayPaint(ax, ay);
         break;
       case "eraser":
-        this.eraser(pmouseX - this.x, pmouseY - this.y, ax, ay);
+        const pax = this.toBufferCoord(pmouseX, this.x);
+        const pay = this.toBufferCoord(pmouseY, this.y);
+        this.eraser(pax, pay, ax, ay);
         break;
       case "pencil":
       case "brush":
@@ -157,13 +272,14 @@ export class Canvas {
       case "line":
       case "rect":
       case "circle":
-        this.previewX = ax;
-        this.previewY = ay;
+        this.previewX = mx - this.x;
+        this.previewY = my - this.y;
         break;
     }
   }
 
   mouseReleased() {
+    this.resizeMode = null;
     if (this.isDrawingGeometry()) {
       this.endGeometry(mouseX - this.x, mouseY - this.y);
     }
@@ -172,33 +288,31 @@ export class Canvas {
   }
 
   sprayPaint(x, y) {
-    const density = 50;
-    const radius = 10;
+    const density = 5;
+    const radius = 3;
     this.buffer.stroke(state.currentColor);
     this.buffer.strokeWeight(1);
     for (let i = 0; i < density; i++) {
       const angle = random(TWO_PI);
       const r = random(radius);
-      this.buffer.point(x + r * cos(angle), y + r * sin(angle));
+      this.buffer.point(Math.floor(x + r * cos(angle)), Math.floor(y + r * sin(angle)));
     }
   }
 
   eraser(x1, y1, x2, y2) {
     this.buffer.stroke(255);
-    this.buffer.strokeWeight(10);
+    this.buffer.strokeWeight(4);
     this.buffer.line(x1, y1, x2, y2);
   }
 
   paint(x, y) {
-    x = Math.floor(x);
-    y = Math.floor(y);
-    
     this.buffer.loadPixels();
-    const d = this.buffer.pixelDensity();
-    const w = this.buffer.width * d;
-    const h = this.buffer.height * d;
+    const w = this.buffer.width;
+    const h = this.buffer.height;
     
-    const idx = 4 * (y * d * w + x * d);
+    if (x < 0 || x >= w || y < 0 || y >= h) return;
+
+    const idx = 4 * (y * w + x);
     const targetR = this.buffer.pixels[idx];
     const targetG = this.buffer.pixels[idx+1];
     const targetB = this.buffer.pixels[idx+2];
@@ -214,7 +328,7 @@ export class Canvas {
       return;
     }
 
-    const stack = [[x * d, y * d]];
+    const stack = [[x, y]];
     const pixels = this.buffer.pixels;
 
     while (stack.length > 0) {
@@ -239,5 +353,18 @@ export class Canvas {
       }
     }
     this.buffer.updatePixels();
+  }
+
+  beginGeometry(x, y) {
+    this.drawingX = x;
+    this.drawingY = y;
+  }
+
+  endGeometry(x, y) {
+    this.drawShape(state.currentTool, this.drawingX, this.drawingY, x, y);
+    this.drawingX = null;
+    this.drawingY = null;
+    this.previewX = null;
+    this.previewY = null;
   }
 }
